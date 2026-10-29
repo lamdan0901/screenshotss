@@ -9,7 +9,7 @@ Or capture into the annotation editor and save when you are done drawing.
 Requires Windows 10/11 and the **.NET 10 Desktop Runtime** (the Windows Desktop
 runtime, not only the ASP.NET/Core runtime). No third-party packages or installer.
 
-Double-click `dist/Screenshotss.exe` after compiling, or run from source:
+Double-click the included `dist/Screenshotss.exe`, or run from source:
 
 ```powershell
 dotnet run --project Screenshotss
