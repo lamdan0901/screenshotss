@@ -17,7 +17,7 @@ dotnet run --project Screenshotss
 
 1. Choose a save folder on first launch. The app then stays in the system tray;
    look under the taskbar's hidden icons if needed.
-2. Press **Ctrl+Shift+F9**, double-click its tray icon, or right-click → **Capture**.
+2. Press **PrintScreen**, double-click its tray icon, or right-click → **Capture**.
 3. Drag a rectangle; release to save and copy its absolute path.
 4. Paste the path with **Ctrl+V**. Escape/right-click cancels without saving or
    changing the clipboard. A click without a drag leaves the selector open.
@@ -34,7 +34,7 @@ save elsewhere. A shortcut conflict leaves the tray Capture command available.
 
 ## Capture and annotate
 
-Press **Ctrl+Shift+F10** or right-click the tray icon → **Capture and annotate**.
+Press **Shift+PrintScreen** or right-click the tray icon → **Capture and annotate**.
 Select a region as usual, then draw in the editor:
 
 - **Pen**, **Line**, **Arrow**: drag to draw. Arrows point toward the release point.
@@ -52,12 +52,23 @@ errors keep the editor open so you can retry. If the destination folder has
 disappeared, Save lets you choose another folder. The desktop buffer is released
 before editing; only the selected capture and its annotations remain in memory.
 
-**Ctrl+Shift+F9** and tray double-click continue to save immediately.
+**PrintScreen** and tray double-click continue to save immediately.
+
+## Fullscreen capture
+
+Press **Ctrl+Shift+PrintScreen** or right-click the tray icon → **Fullscreen capture**.
+The monitor under the cursor is saved immediately as a PNG, and its full path
+is copied. No region selection or annotation editor opens.
+
+Enable **Capture all screens (fullscreen)** in the tray menu to capture all
+monitors together. This toggle starts unchecked each time the app launches
+and only affects fullscreen capture.
 
 ### Updating a running copy
 
-The latest build is in `dist/Screenshotss.exe`. Exit the old app through its
-tray menu, then launch this executable. Keep all files in `dist` together.
+Updated builds are in `dist/Screenshotss.exe`, or `dist-update/Screenshotss.exe`
+when the old app is running from `dist`. Exit the old app through its tray menu,
+then launch the updated executable. Keep all files in its folder together.
 The remembered save folder is shared with the old copy, including `dist-update`.
 Only one instance can run at a time.
 
@@ -79,9 +90,13 @@ The .NET 10 SDK is needed for source builds. The compiler and built-in analyzers
 run with warnings treated as errors:
 
 ```powershell
-dotnet build Screenshotss/Screenshotss.csproj -c Release -warnaserror -o dist
+dotnet build Screenshotss/Screenshotss.csproj -c Release -warnaserror --no-incremental -o dist
 dotnet run --project checks/Screenshotss.Checks.csproj -c Release
 ```
+
+Use the full build pipeline when distributing the app. Calling MSBuild's
+`Compile` target alone skips embedded-resource preparation; a subsequent
+incremental build can reuse a DLL without the toolbar icons.
 
 To check the thickness popup's native layout and live preview after compiling:
 
@@ -96,7 +111,8 @@ The dependency-free checks cover PNG pixels and dimensions, unique files,
 Unicode paths, folder persistence, invalid settings/destinations, and selection
 geometry across negative monitor coordinates. Annotation checks cover preview
 coordinate mapping, pen/line/arrow pixels, width/color, undo rendering, and
-original-size PNG output.
+original-size PNG output. Fullscreen checks briefly capture the cursor's monitor
+and the entire desktop in memory and check dimensions without saving or copying.
 
 ## Capture limits
 

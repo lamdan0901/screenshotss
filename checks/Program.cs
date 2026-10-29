@@ -23,6 +23,22 @@ void Throws<T>(Action action, string description) where T : Exception
 
 try
 {
+    foreach (var name in new[] { "pen", "line", "arrow", "line-thickness", "undo", "save", "discard" })
+    {
+        using var stream = typeof(AnnotationEditor).Assembly.GetManifestResourceStream($"Screenshotss.Assets.Toolbar.{name}.png");
+        Check(stream is not null, $"Toolbar icon {name} is embedded in the application");
+        using var toolbarIcon = Image.FromStream(stream!);
+        Check(toolbarIcon.Width > 0 && toolbarIcon.Height > 0, $"Toolbar icon {name} decodes as an image");
+    }
+
+    using (var fullscreen = TrayApplication.CaptureImage(annotate: false, fullscreen: true))
+        Check(fullscreen is not null && fullscreen.Size == Screen.FromPoint(Cursor.Position).Bounds.Size,
+            "Fullscreen capture defaults to the monitor under the cursor without opening a region selector");
+
+    using (var fullscreen = TrayApplication.CaptureImage(annotate: false, fullscreen: true, allScreens: true))
+        Check(fullscreen is not null && fullscreen.Size == SystemInformation.VirtualScreen.Size,
+            "All-screens fullscreen capture returns the entire virtual desktop without opening a region selector");
+
     using var image = new Bitmap(12, 8, PixelFormat.Format32bppArgb);
     using (var graphics = Graphics.FromImage(image))
         graphics.Clear(Color.CornflowerBlue);

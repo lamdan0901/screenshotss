@@ -7,9 +7,14 @@ namespace Screenshotss;
 internal sealed class TrayApplication : ApplicationContext
 {
     private readonly ContextMenuStrip menu = new();
+    private readonly ToolStripMenuItem captureAllScreens = new("Capture all &screens (fullscreen)")
+    {
+        CheckOnClick = true
+    };
     private readonly NotifyIcon tray;
     private readonly HotkeyWindow hotkey;
     private readonly HotkeyWindow annotationHotkey;
+    private readonly HotkeyWindow fullscreenHotkey;
     private readonly Icon appIcon;
     private string? saveFolder;
     private bool busy;
@@ -17,8 +22,10 @@ internal sealed class TrayApplication : ApplicationContext
     internal TrayApplication(Icon icon)
     {
         appIcon = icon;
-        menu.Items.Add("&Capture    Ctrl+Shift+F9", null, CaptureRequested);
-        menu.Items.Add("Capture &and annotate    Ctrl+Shift+F10", null, AnnotationCaptureRequested);
+        menu.Items.Add("&Capture    PrintScreen", null, CaptureRequested);
+        menu.Items.Add("Capture &and annotate    Shift+PrintScreen", null, AnnotationCaptureRequested);
+        menu.Items.Add("&Fullscreen capture    Ctrl+Shift+PrintScreen", null, FullscreenCaptureRequested);
+        menu.Items.Add(captureAllScreens);
         menu.Items.Add("Choose &folder…", null, (_, _) => ChooseFolderRequested());
         menu.Items.Add("&Open folder", null, (_, _) => OpenFolder());
         menu.Items.Add(new ToolStripSeparator());
@@ -27,13 +34,15 @@ internal sealed class TrayApplication : ApplicationContext
         tray = new NotifyIcon
         {
             Icon = appIcon,
-            Text = "Screenshotss — F9 capture / F10 annotate",
+            Text = "Screenshotss — PrintScreen capture / Shift+PrintScreen annotate",
             ContextMenuStrip = menu,
             Visible = true
         };
         tray.DoubleClick += CaptureRequested;
-        hotkey = new HotkeyWindow(() => CaptureRequested(this, EventArgs.Empty), Keys.F9);
-        annotationHotkey = new HotkeyWindow(() => AnnotationCaptureRequested(this, EventArgs.Empty), Keys.F10);
+        hotkey = new HotkeyWindow(() => CaptureRequested(this, EventArgs.Empty), Keys.PrintScreen);
+        annotationHotkey = new HotkeyWindow(() => AnnotationCaptureRequested(this, EventArgs.Empty), Keys.Shift | Keys.PrintScreen);
+        fullscreenHotkey = new HotkeyWindow(() => FullscreenCaptureRequested(this, EventArgs.Empty),
+            Keys.Control | Keys.Shift | Keys.PrintScreen);
         Application.Idle += FirstLaunch;
     }
 
@@ -55,13 +64,16 @@ internal sealed class TrayApplication : ApplicationContext
             if (saveFolder is null)
                 ChooseFolder();
             if (!hotkey.Registered)
-                ShowError("Ctrl+Shift+F9 is already in use or could not be registered. "
+                ShowError("PrintScreen is already in use or could not be registered. "
                     + "You can still capture from the tray menu or by double-clicking the tray icon.");
             if (!annotationHotkey.Registered)
-                ShowError("Ctrl+Shift+F10 is already in use or could not be registered. "
+                ShowError("Shift+PrintScreen is already in use or could not be registered. "
                     + "Use Capture and annotate from the tray menu instead.");
+            if (!fullscreenHotkey.Registered)
+                ShowError("Ctrl+Shift+PrintScreen is already in use or could not be registered. "
+                    + "Use Fullscreen capture from the tray menu instead.");
             tray.ShowBalloonTip(3000, "Screenshotss is ready",
-                "Ctrl+Shift+F9: instant capture. Ctrl+Shift+F10: capture and annotate.", ToolTipIcon.Info);
+                "PrintScreen: region. Shift+PrintScreen: annotate. Ctrl+Shift+PrintScreen: fullscreen.", ToolTipIcon.Info);
         }
         finally
         {
@@ -73,7 +85,9 @@ internal sealed class TrayApplication : ApplicationContext
 
     private async void AnnotationCaptureRequested(object? sender, EventArgs e) => await CaptureAsync(annotate: true);
 
-    private async Task CaptureAsync(bool annotate)
+    private async void FullscreenCaptureRequested(object? sender, EventArgs e) => await CaptureAsync(annotate: false, fullscreen: true);
+
+    private async Task CaptureAsync(bool annotate, bool fullscreen = false)
     {
         if (busy)
             return;
@@ -91,7 +105,7 @@ internal sealed class TrayApplication : ApplicationContext
 
             // Let the tray menu disappear before freezing the desktop.
             await Task.Delay(180);
-            using var image = SelectRegion(annotate);
+            using var image = CaptureImage(annotate, fullscreen, captureAllScreens.Checked);
             if (image is null)
                 return;
 
@@ -114,9 +128,13 @@ internal sealed class TrayApplication : ApplicationContext
         }
     }
 
-    private static Bitmap? SelectRegion(bool annotate)
+    internal static Bitmap? CaptureImage(bool annotate, bool fullscreen, bool allScreens = false)
     {
-        var bounds = SystemInformation.VirtualScreen;
+        var bounds = fullscreen && !allScreens
+            ? Screen.FromPoint(Cursor.Position).Bounds
+            : SystemInformation.VirtualScreen;
+        if (fullscreen)
+            return CaptureOverlay.Snapshot(bounds);
         using var desktop = CaptureOverlay.Snapshot(bounds);
         using var overlay = new CaptureOverlay(desktop, bounds, annotate);
         if (overlay.ShowDialog() != DialogResult.OK)
@@ -226,6 +244,7 @@ internal sealed class TrayApplication : ApplicationContext
             Application.Idle -= FirstLaunch;
             hotkey.Dispose();
             annotationHotkey.Dispose();
+            fullscreenHotkey.Dispose();
             tray.Dispose();
             menu.Dispose();
         }

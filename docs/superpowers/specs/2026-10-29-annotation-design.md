@@ -11,7 +11,7 @@ window after selection rather than extend the full-desktop selector with an
 editing toolbar. This keeps the selector small and frees the desktop buffer
 while editing. No added packages. Original instant capture remains available.
 
-Implementation defaults: Ctrl+Shift+F9 is instant capture; Ctrl+Shift+F10 and a
+Implementation defaults: PrintScreen is instant capture; Shift+PrintScreen and a
 new Capture & annotate tray command open the editor. Default pen is red, 3 px;
 width ranges from 1 to 32 original-image pixels. Use a native ColorDialog.
 Provide Undo/Ctrl+Z for correcting strokes. Preview fits the window, while saved

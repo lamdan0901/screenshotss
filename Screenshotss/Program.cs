@@ -9,7 +9,7 @@ internal static class Program
         using var instance = new Mutex(true, @"Local\Screenshotss.Tray", out var firstInstance);
         if (!firstInstance)
         {
-            MessageBox.Show("Screenshotss is already running. Use its tray icon, Ctrl+Shift+F9 or Ctrl+Shift+F10.",
+            MessageBox.Show("Screenshotss is already running. Use its tray icon, PrintScreen, Shift+PrintScreen or Ctrl+Shift+PrintScreen.",
                 "Screenshotss", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }

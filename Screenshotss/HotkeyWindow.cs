@@ -9,11 +9,16 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
 
     internal bool Registered { get; }
 
-    internal HotkeyWindow(Action capture, Keys key)
+    internal HotkeyWindow(Action capture, Keys shortcut)
     {
         this.capture = capture;
         CreateHandle(new CreateParams { Caption = "Screenshotss hotkey", Parent = new IntPtr(-3) });
-        Registered = RegisterHotKey(Handle, HotkeyId, 0x0002 | 0x0004 | 0x4000, (uint)key);
+        var modifiers = 0x4000u; // MOD_NOREPEAT
+        if ((shortcut & Keys.Control) != 0)
+            modifiers |= 0x0002;
+        if ((shortcut & Keys.Shift) != 0)
+            modifiers |= 0x0004;
+        Registered = RegisterHotKey(Handle, HotkeyId, modifiers, (uint)(shortcut & Keys.KeyCode));
     }
 
     protected override void WndProc(ref Message message)
