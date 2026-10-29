@@ -1,5 +1,6 @@
 using System.Drawing.Imaging;
 using System.Text.Json;
+using Microsoft.Win32;
 using Screenshotss;
 
 var root = Path.Combine(Path.GetTempPath(), $"Screenshotss-checks-{Guid.NewGuid():N}");
@@ -23,6 +24,45 @@ void Throws<T>(Action action, string description) where T : Exception
 
 try
 {
+    var startupKeyPath = $@"Software\Screenshotss-checks-{Guid.NewGuid():N}";
+    try
+    {
+        using var key = Registry.CurrentUser.CreateSubKey(startupKeyPath);
+        using var preferences = Registry.CurrentUser.CreateSubKey(startupKeyPath + "-preferences");
+        key.SetValue("Unrelated", "keep");
+        Check(!StartupRegistration.IsEnabled(null) && !StartupRegistration.IsEnabled(key),
+            "Startup is disabled when no registration exists");
+        var executablePath = Path.Combine(root, "Tiếng Việt", "Screenshotss with spaces.exe");
+        StartupRegistration.Initialize(key, preferences, executablePath);
+        Check(StartupRegistration.IsEnabled(key) && (string?)key.GetValue("Screenshotss") == $"\"{executablePath}\""
+            && key.GetValueKind("Screenshotss") == RegistryValueKind.String
+            && (int?)preferences.GetValue("StartWithWindows") == 1,
+            "First launch enables startup by default with a quoted path including spaces and Unicode");
+        Throws<ArgumentException>(() => StartupRegistration.SetEnabled(key, preferences, true, "relative.exe"),
+            "Startup rejects relative executable paths");
+        Throws<ArgumentException>(() => StartupRegistration.SetEnabled(key, preferences, true, executablePath + '\"'),
+            "Startup rejects quotes inside executable paths");
+        Throws<InvalidOperationException>(() => StartupRegistration.SetEnabled(key, preferences, true, @"C:\" + new string('a', 260) + ".exe"),
+            "Startup rejects commands longer than Windows allows");
+        Check((string?)key.GetValue("Screenshotss") == $"\"{executablePath}\"",
+            "Invalid startup paths preserve the previous registration");
+        StartupRegistration.SetEnabled(key, preferences, false, executablePath);
+        StartupRegistration.SetEnabled(key, preferences, false, executablePath);
+        StartupRegistration.Initialize(key, preferences, executablePath);
+        Check(!StartupRegistration.IsEnabled(key) && key.GetValue("Screenshotss") is null
+            && (string?)key.GetValue("Unrelated") == "keep"
+            && (int?)preferences.GetValue("StartWithWindows") == 0,
+            "Disabling startup preserves unrelated entries and remains disabled on later launches");
+        StartupRegistration.SetEnabled(key, preferences, true, executablePath);
+        StartupRegistration.Initialize(key, preferences, executablePath);
+        Check(StartupRegistration.IsEnabled(key), "Startup can be enabled again after opting out");
+    }
+    finally
+    {
+        Registry.CurrentUser.DeleteSubKey(startupKeyPath, throwOnMissingSubKey: false);
+        Registry.CurrentUser.DeleteSubKey(startupKeyPath + "-preferences", throwOnMissingSubKey: false);
+    }
+
     foreach (var name in new[] { "pen", "line", "arrow", "line-thickness", "undo", "save", "discard" })
     {
         using var stream = typeof(AnnotationEditor).Assembly.GetManifestResourceStream($"Screenshotss.Assets.Toolbar.{name}.png");

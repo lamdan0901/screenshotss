@@ -64,6 +64,16 @@ Enable **Capture all screens (fullscreen)** in the tray menu to capture all
 monitors together. This toggle starts unchecked each time the app launches
 and only affects fullscreen capture.
 
+## Start with Windows
+
+**Start with Windows** is enabled automatically on first launch, so Screenshotss
+launches when you sign into Windows. Uncheck it in the tray menu to remove startup
+registration. Your choice persists across app restarts; no admin is needed.
+
+Startup uses the current executable's location. Keep that folder in place.
+If you move the app or switch between `dist` and `dist-update`, turn the option
+off and on from the copy you want Windows to launch.
+
 ### Updating a running copy
 
 Updated builds are in `dist/Screenshotss.exe`, or `dist-update/Screenshotss.exe`
@@ -113,6 +123,8 @@ geometry across negative monitor coordinates. Annotation checks cover preview
 coordinate mapping, pen/line/arrow pixels, width/color, undo rendering, and
 original-size PNG output. Fullscreen checks briefly capture the cursor's monitor
 and the entire desktop in memory and check dimensions without saving or copying.
+Startup checks use an isolated temporary registry key, leaving actual Windows
+startup entries untouched.
 
 ## Capture limits
 
@@ -126,8 +138,9 @@ captured reliably. GDI capture does not provide HDR color fidelity; use SDR for
 predictable colors. Selection currently uses a mouse; Escape cancels from the
 keyboard. Annotation tools currently require a mouse to draw. Unsaved captures
 are not recovered after an app/OS crash. No text, eraser, redo, recording, OCR,
-autostart, or cloud integration.
+or cloud integration.
 
 Windows APIs: [CopyFromScreen](https://learn.microsoft.com/en-us/dotnet/api/system.drawing.graphics.copyfromscreen),
 [RegisterHotKey](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey),
-[Clipboard.SetDataObject](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.clipboard.setdataobject).
+[Clipboard.SetDataObject](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.clipboard.setdataobject),
+[Run registry keys](https://learn.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys).

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace Screenshotss;
 
@@ -11,6 +12,7 @@ internal sealed class TrayApplication : ApplicationContext
     {
         CheckOnClick = true
     };
+    private readonly ToolStripMenuItem startWithWindows = new("Start with &Windows");
     private readonly NotifyIcon tray;
     private readonly HotkeyWindow hotkey;
     private readonly HotkeyWindow annotationHotkey;
@@ -29,6 +31,8 @@ internal sealed class TrayApplication : ApplicationContext
         menu.Items.Add("Choose &folder…", null, (_, _) => ChooseFolderRequested());
         menu.Items.Add("&Open folder", null, (_, _) => OpenFolder());
         menu.Items.Add(new ToolStripSeparator());
+        startWithWindows.Click += (_, _) => ToggleStartWithWindows();
+        menu.Items.Add(startWithWindows);
         menu.Items.Add("E&xit", null, (_, _) => ExitThread());
 
         tray = new NotifyIcon
@@ -52,6 +56,18 @@ internal sealed class TrayApplication : ApplicationContext
         busy = true;
         try
         {
+            try
+            {
+                using var key = Registry.CurrentUser.CreateSubKey(StartupRegistration.KeyPath);
+                using var preferences = Registry.CurrentUser.CreateSubKey(StartupRegistration.PreferencesKeyPath);
+                StartupRegistration.Initialize(key, preferences, Application.ExecutablePath);
+                startWithWindows.Checked = StartupRegistration.IsEnabled(key);
+            }
+            catch (Exception error)
+            {
+                ShowError($"Could not initialize the Start with Windows setting.\n\n{error.Message}");
+            }
+
             try
             {
                 saveFolder = AppSettings.Load(AppSettings.FilePath);
@@ -168,6 +184,29 @@ internal sealed class TrayApplication : ApplicationContext
         {
             ShowError($"Could not save the screenshot.\n\n{error.Message}");
             return false;
+        }
+    }
+
+    private void ToggleStartWithWindows()
+    {
+        if (busy)
+            return;
+        busy = true;
+        try
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(StartupRegistration.KeyPath);
+            using var preferences = Registry.CurrentUser.CreateSubKey(StartupRegistration.PreferencesKeyPath);
+            var enabled = !StartupRegistration.IsEnabled(key);
+            StartupRegistration.SetEnabled(key, preferences, enabled, Application.ExecutablePath);
+            startWithWindows.Checked = enabled;
+        }
+        catch (Exception error)
+        {
+            ShowError($"Could not change the Start with Windows setting.\n\n{error.Message}");
+        }
+        finally
+        {
+            busy = false;
         }
     }
 
