@@ -5,7 +5,7 @@ namespace Screenshotss;
 internal sealed class AnnotationEditor : Form
 {
     private readonly AnnotationCanvas canvas;
-    private readonly Func<Bitmap, bool> saveCapture;
+    private readonly Func<Bitmap, Task<bool>> saveCapture;
     private readonly ToolStrip toolbar = new()
     {
         GripStyle = ToolStripGripStyle.Hidden,
@@ -27,7 +27,7 @@ internal sealed class AnnotationEditor : Form
     private readonly ToolStripDropDown widthPopup = new() { Padding = Padding.Empty };
     private bool saving;
 
-    internal AnnotationEditor(Bitmap image, Func<Bitmap, bool> saveCapture, Icon icon)
+    internal AnnotationEditor(Bitmap image, Func<Bitmap, Task<bool>> saveCapture, Icon icon)
     {
         this.saveCapture = saveCapture;
         Text = "Screenshotss — Annotate";
@@ -251,7 +251,7 @@ internal sealed class AnnotationEditor : Form
         RefreshToolbarImages();
     }
 
-    private void SaveImage()
+    private async void SaveImage()
     {
         if (saving)
             return;
@@ -260,7 +260,7 @@ internal sealed class AnnotationEditor : Form
         try
         {
             using var rendered = canvas.Render();
-            if (!saveCapture(rendered))
+            if (!await saveCapture(rendered))
                 return;
             DialogResult = DialogResult.OK;
             Close();
@@ -295,6 +295,13 @@ internal sealed class AnnotationEditor : Form
             return true;
         }
         return base.ProcessCmdKey(ref message, keyData);
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (saving && DialogResult != DialogResult.OK)
+            e.Cancel = true;
+        base.OnFormClosing(e);
     }
 
     protected override void Dispose(bool disposing)

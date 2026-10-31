@@ -1,12 +1,13 @@
 # Screenshotss
 
 A small native Windows tray app. Drag a region, automatically save a PNG to
-your chosen folder, and copy the **full file path as text** to the clipboard.
+your chosen folder, then copy the **full file path as text** to the clipboard
+first and the **image itself** second.
 Or capture into the annotation editor and save when you are done drawing.
 
 ## Run
 
-Requires Windows 10/11 and the **.NET 10 Desktop Runtime** (the Windows Desktop
+Requires Windows 10 version 1809 or later / Windows 11 and the **.NET 10 Desktop Runtime** (the Windows Desktop
 runtime, not only the ASP.NET/Core runtime). No third-party packages or installer.
 
 Double-click the included `dist/Screenshotss.exe`, or run from source:
@@ -18,16 +19,22 @@ dotnet run --project Screenshotss
 1. Choose a save folder on first launch. The app then stays in the system tray;
    look under the taskbar's hidden icons if needed.
 2. Press **PrintScreen**, double-click its tray icon, or right-click → **Capture**.
-3. Drag a rectangle; release to save and copy its absolute path.
-4. Paste the path with **Ctrl+V**. Escape/right-click cancels without saving or
+3. Drag a rectangle; release to save, copy its absolute path, then copy the image.
+4. Paste the image with **Ctrl+V**. Escape/right-click cancels without saving or
    changing the clipboard. A click without a drag leaves the selector open.
 
 Right-click the tray icon for **Choose folder**, **Open folder**, and **Exit**.
 The folder is remembered in `%LOCALAPPDATA%\Screenshotss\settings.json`.
 If you cancel the first folder picker, Capture asks again when you use it.
 
-The path is copied after saving succeeds. If another app keeps the clipboard
-busy, Screenshotss retries, then shows where the saved image can be found.
+The path and image are copied in that order after saving succeeds. With Windows
+clipboard history enabled, the app waits until the path is retained before
+copying the image, giving **Win+V** separate image and path entries. **Ctrl+V**
+pastes the image. If history is disabled, only the final image remains available.
+If Windows cannot retain the path within five seconds, the path stays on the
+clipboard and the app reports the problem; the PNG is still saved. Clipboard
+access retries if another app holds it open. Windows clipboard history limits
+each item to 4 MB, so large images may only be available through Ctrl+V.
 Captures have timestamped, unique names and do not overwrite existing images.
 If the selected folder disappears, choose it again; the app does not silently
 save elsewhere. A shortcut conflict leaves the tray Capture command available.
@@ -43,8 +50,9 @@ Select a region as usual, then draw in the editor:
   Drag the slider to select 1–32 image pixels; the preview uses the current color.
   Each new stroke keeps the color and width chosen when it starts.
 - **Undo** or **Ctrl+Z** removes the last stroke.
-- **Save** or **Ctrl+S** saves the annotated PNG, copies its full path, and closes
-  the editor. Nothing is saved or copied before this step.
+- **Save** or **Ctrl+S** saves the annotated PNG, copies its full path followed by
+  the annotated image, and closes the editor. Nothing is saved or copied before
+  this step.
 - **Discard**, **Esc**, or the close button immediately discards the unsaved capture.
 
 The preview fits the window without changing saved image dimensions. Save
@@ -58,7 +66,7 @@ before editing; only the selected capture and its annotations remain in memory.
 
 Press **Ctrl+Shift+PrintScreen** or right-click the tray icon → **Fullscreen capture**.
 The monitor under the cursor is saved immediately as a PNG, and its full path
-is copied. No region selection or annotation editor opens.
+is copied followed by the image. No region selection or annotation editor opens.
 
 Enable **Capture all screens (fullscreen)** in the tray menu to capture all
 monitors together. This toggle starts unchecked each time the app launches
@@ -125,6 +133,15 @@ original-size PNG output. Fullscreen checks briefly capture the cursor's monitor
 and the entire desktop in memory and check dimensions without saving or copying.
 Startup checks use an isolated temporary registry key, leaving actual Windows
 startup entries untouched.
+
+To check clipboard write order, retained image pixels, and actual Windows
+history entries (these replace the clipboard with a small test image; enable
+Windows clipboard history before running):
+
+```powershell
+pwsh -NoProfile -STA -File checks/clipboard.ps1
+dotnet run --project checks/Screenshotss.Checks.csproj -c Release -- --clipboard-history
+```
 
 ## Capture limits
 

@@ -131,7 +131,7 @@ internal sealed class TrayApplication : ApplicationContext
                 editor.ShowDialog();
             }
             else
-                SaveCapture(image);
+                await SaveCapture(image);
         }
         catch (Exception error)
         {
@@ -158,7 +158,7 @@ internal sealed class TrayApplication : ApplicationContext
         return desktop.Clone(overlay.Selection, PixelFormat.Format32bppArgb);
     }
 
-    private bool SaveCapture(Bitmap image)
+    private async Task<bool> SaveCapture(Bitmap image)
     {
         try
         {
@@ -167,17 +167,16 @@ internal sealed class TrayApplication : ApplicationContext
             var path = ScreenshotStore.Save(image, saveFolder!);
             try
             {
-                var clipboard = new DataObject(DataFormats.UnicodeText, path);
-                Clipboard.SetDataObject(clipboard, copy: true, retryTimes: 10, retryDelay: 75);
+                await ScreenshotClipboard.CopyAsync(image, path);
             }
-            catch (ExternalException)
+            catch (Exception error) when (error is ExternalException or TimeoutException)
             {
-                ShowError($"Screenshot saved, but the clipboard is busy.\n\n{path}\n\n"
+                ShowError($"Screenshot saved, but copying to the clipboard could not finish.\n\n{path}\n\n{error.Message}\n\n"
                     + "Use Open folder from the tray menu to find the image.");
                 return true;
             }
 
-            tray.ShowBalloonTip(2000, "Screenshot saved — path copied", path, ToolTipIcon.Info);
+            tray.ShowBalloonTip(2000, "Screenshot saved — path and image copied", path, ToolTipIcon.Info);
             return true;
         }
         catch (Exception error)
