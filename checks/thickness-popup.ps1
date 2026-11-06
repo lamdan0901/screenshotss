@@ -5,12 +5,15 @@ Add-Type -AssemblyName System.Windows.Forms
 [Windows.Forms.Application]::SetHighDpiMode([Windows.Forms.HighDpiMode]::PerMonitorV2) | Out-Null
 [Windows.Forms.Application]::EnableVisualStyles()
 [Windows.Forms.Application]::SetDefaultFont([Drawing.Font]::new('Segoe UI', 10))
-$appDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../Screenshotss/bin/Release/net10.0-windows'))
-$assembly = [Reflection.Assembly]::LoadFile((Join-Path $appDirectory 'Screenshotss.dll'))
+$appDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../Screenshotss/bin/Release/net10.0-windows10.0.22621.0'))
+$assembly = [Reflection.Assembly]::LoadFrom((Join-Path $appDirectory 'Screenshotss.dll'))
 $flags = [Reflection.BindingFlags]'Instance,NonPublic'
 $image = [Drawing.Bitmap]::new(760, 400)
 $icon = [Drawing.Icon]::ExtractAssociatedIcon((Join-Path $appDirectory 'Screenshotss.exe'))
-$save = [Func[Drawing.Bitmap,bool]] { param($capture) return $false }
+$save = [Func[Drawing.Bitmap,Threading.Tasks.Task[bool]]] {
+    param($capture)
+    return [Threading.Tasks.Task]::FromResult($false)
+}
 $editor = [Activator]::CreateInstance($assembly.GetType('Screenshotss.AnnotationEditor'), $flags,
     $null, [object[]]@($image, $save, $icon), $null)
 try {

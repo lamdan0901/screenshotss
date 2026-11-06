@@ -3,6 +3,12 @@ using System.Text.Json;
 using Microsoft.Win32;
 using Screenshotss;
 
+if (args.Contains("--clipboard-history"))
+{
+    ClipboardHistoryChecks.Run();
+    return;
+}
+
 var root = Path.Combine(Path.GetTempPath(), $"Screenshotss-checks-{Guid.NewGuid():N}");
 Directory.CreateDirectory(root);
 var passed = 0;
